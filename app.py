@@ -3,7 +3,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from transformers import AutoTokenizer, pipeline
-from langchain_community.document_loaders import PyPDFLoader
+from pypdf import PdfReader
+from langchain_core.documents import Document
 from langchain.prompts import PromptTemplate
 from werkzeug.utils import secure_filename
 import os
@@ -54,7 +55,22 @@ def upload():
     uploaded_file.save(file_path)
 
     try:
-        pages = PyPDFLoader(str(file_path)).load()
+        reader = PdfReader(str(file_path))
+        pages = []
+
+        for page_number, page in enumerate(reader.pages):
+            text = page.extract_text() or ""
+            if text.strip():
+                pages.append(
+                    Document(
+                        page_content=text,
+                        metadata={
+                            "source": str(file_path),
+                            "page": page_number,
+                        },
+                    )
+                )
+
         if not pages:
             return render_template(
                 "index1.html",
@@ -64,20 +80,15 @@ def upload():
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=500,
             chunk_overlap=50,
-        )
+             )
         docs = text_splitter.split_documents(pages)
-
-        if not docs:
-            return render_template(
-                "index1.html",
-                answer="The PDF contains no readable text."
-            )
 
         embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-l6-v2",
             model_kwargs={"device": "cpu"},
             encode_kwargs={"normalize_embeddings": False},
         )
+
         db = FAISS.from_documents(docs, embeddings)
         search_docs = db.similarity_search(question, k=3)
 
@@ -92,6 +103,7 @@ def upload():
             (doc.page_content, question) for doc in search_docs
         ]
         session["feedback_index"] = 0
+
         model_name = "Intel/dynamic_tinybert"
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         question_answerer = pipeline(

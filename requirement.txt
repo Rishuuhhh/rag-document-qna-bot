@@ -1,8 +1,8 @@
-langchain==0.1.7
+langchain==0.1.8
+langchain-community==0.0.27
 torch
-transformers
+transformers==4.57.6
 sentence-transformers
 faiss-cpu
-langchain-community
 pypdf
 flask
