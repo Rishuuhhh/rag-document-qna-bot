@@ -73,7 +73,12 @@
             color: var(--blue);
             font-size: 14px;
         }
-
+                .citation {
+            margin-left: 8px;
+            color: var(--pink);
+            font-size: 12px;
+            font-weight: 600;
+        }
         .content {
             color: #f2f2f2;
             font-size: 15px;
@@ -199,7 +204,7 @@
 
         {% if context %}
         <section class="card source-card">
-            <h2>Retrieved text</h2>
+            <h2>Retrieved text <span class="citation">Page {{ source_page }}</span></h2>
             <div class="content">{{ context }}</div>
 
             <div class="feedback">

@@ -99,9 +99,10 @@ def upload():
             )
 
         context = search_docs[0].page_content
-        session["context_question"] = [
-            (doc.page_content, question) for doc in search_docs
-        ]
+        source_page=search_docs[0].metadata.get("page",0)+1
+        session["context_question"]=[[
+            doc.page_content , question,doc.metadata.get("page",0)+1] for doc in search_docs]
+        
         session["feedback_index"] = 0
 
         model_name = "Intel/dynamic_tinybert"
@@ -112,12 +113,13 @@ def upload():
             tokenizer=tokenizer,
         )
         result = question_answerer(question=question, context=context)
-
+        app.logger.info("Answer score: %s", result.get("score"))
         return render_template(
-            "index1.html",
-            answer=f"answer: {result['answer']}",
-            context=f"context: {context}",
-            question=f"question: {question}",
+             "index1.html",
+           answer=result["answer"],
+            context=context,
+            question=question,
+            source_page=source_page,
         )
 
     except Exception:
@@ -158,9 +160,9 @@ def feedback():
                 "index1.html",
                 answer="No more relevant passages were found. Please try another question.",
             )
-
+        app.logger.info("Answer score: %s", result.get("score"))
         session["feedback_index"] = next_index
-        context, question = context_question[next_index]
+        context, question,source_page = context_question[next_index]
 
         try:
             model_name = "Intel/dynamic_tinybert"
@@ -173,16 +175,18 @@ def feedback():
             result = question_answerer(question=question, context=context)
 
             return render_template(
-                "index1.html",
-                answer=f"answer: {result['answer']}",
-                context=f"context: {context}",
-                question=f"question: {question}",
+                 "index1.html",
+                answer=result["answer"],
+                context=context,
+                question=question,
+                source_page=source_page,
             )
         except Exception:
             app.logger.exception("Failed to generate an answer from another passage")
             return render_template(
                 "index1.html",
                 answer="I couldn't generate another answer. Please try again.",
+                source_page=source_page,
             )
 
     return render_template(
